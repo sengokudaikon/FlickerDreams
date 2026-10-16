@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>DreamslashReach</AssemblyName>
-    <RootNamespace>DreamslashReach</RootNamespace>
-    <Version>0.1.0</Version>
+    <AssemblyName>FlickerDreams</AssemblyName>
+    <RootNamespace>FlickerDreams</RootNamespace>
+    <Version>0.15.0</Version>
   </PropertyGroup>
 
   <!-- Loader and game assemblies come from the install; they are never copied or committed. -->
@@ -13,6 +13,12 @@
     <Reference Include="$(Il2CppAssembliesPath)\Il2Cppmscorlib.dll" Private="false" />
     <Reference Include="$(Il2CppAssembliesPath)\UnityEngine.CoreModule.dll" Private="false" />
     <Reference Include="$(Il2CppAssembliesPath)\Il2CppLE.dll" Private="false" />
+    <Reference Include="$(Il2CppAssembliesPath)\Il2CppLE.Addressables.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- How Eterra's Blessing shows the settings: read from the DLL, so it travels with the mod. -->
+  <ItemGroup>
+    <EmbeddedResource Include="ModSettings.json" LogicalName="ModSettings.json" />
   </ItemGroup>
 
   <!-- Local linking until the registry exists: copy the build into the game's Mods folder. -->
