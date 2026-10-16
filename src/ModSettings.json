@@ -5,29 +5,10 @@
       "name": "FlickerDreams",
       "settings": [
         { "key": "ReachMultiplier", "label": "Reach", "group": "Dreamslash", "unit": "×", "min": 0 },
-        { "key": "PassThrough", "label": "Land past the target", "group": "Dreamslash", "min": 0 },
-        { "key": "RequireTarget", "label": "Needs an enemy in reach", "group": "Dreamslash" },
         { "key": "Cooldown", "label": "Cooldown", "group": "Dreamslash", "unit": "s", "min": 0 },
 
-        { "key": "RepeatChance", "label": "Repeat chance", "group": "Repeats", "min": 0, "max": 1 },
-        { "key": "RepeatStackCost", "label": "Dream stacks per repeat", "group": "Repeats", "min": 0 },
-        { "key": "RepeatRange", "label": "Repeat search range", "group": "Repeats", "min": 0 },
-
-        { "key": "Waves", "label": "Waves", "group": "Waves" },
-        {
-          "key": "WaveStyle", "label": "Wave", "group": "Waves",
-          "description": "Dreamslash's own sword wave, or a Shadow Rend shadow that appears by the enemy and strikes it 0.8 s later, for Shadow Rend's mana cost each instead of the mana below.",
-          "choices": [ { "value": "sword", "label": "Sword wave" }, { "value": "shadowrend", "label": "Shadow Rend" } ]
-        },
-        { "key": "WaveChance", "label": "Wave chance", "group": "Waves", "min": 0 },
-        { "key": "WaveMax", "label": "Most waves per strike", "group": "Waves", "min": 0 },
-        { "key": "WaveRange", "label": "Wave search range", "group": "Waves", "min": 0 },
-        { "key": "WaveManaCost", "label": "Mana per wave, share of maximum", "group": "Waves", "min": 0, "max": 1 },
-        {
-          "key": "WaveManaFlat", "label": "Flat mana per wave", "group": "Waves", "min": 0,
-          "description": "Flat mana per sword wave, on top of the share of maximum mana."
-        },
-        { "key": "WaveCostRises", "label": "Each further wave costs more", "group": "Waves" },
+        { "key": "WaveManaCost", "label": "Mana per wave, share of maximum", "group": "Sword waves", "min": 0, "max": 1 },
+        { "key": "WaveManaFlat", "label": "Flat mana per wave", "group": "Sword waves", "min": 0 },
 
         { "key": "CameraSmoothing", "label": "Camera smoothing", "group": "Camera", "unit": "×", "min": 0 },
 
