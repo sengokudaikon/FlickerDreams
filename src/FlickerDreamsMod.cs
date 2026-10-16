@@ -1,7 +1,7 @@
 using FlickerDreams;
 using MelonLoader;
 
-[assembly: MelonInfo(typeof(FlickerDreamsMod), "Flicker Dreams", "0.16.0", "sengokudaikon")]
+[assembly: MelonInfo(typeof(FlickerDreamsMod), "Flicker Dreams", "0.16.1", "sengokudaikon")]
 [assembly: MelonGame("Eleventh Hour Games", "Last Epoch")]
 
 namespace FlickerDreams;

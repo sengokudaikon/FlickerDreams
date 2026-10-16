@@ -2,7 +2,7 @@
   <PropertyGroup>
     <AssemblyName>FlickerDreams</AssemblyName>
     <RootNamespace>FlickerDreams</RootNamespace>
-    <Version>0.16.0</Version>
+    <Version>0.16.1</Version>
   </PropertyGroup>
 
   <!-- Loader and game assemblies come from the install; they are never copied or committed. -->

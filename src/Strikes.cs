@@ -45,7 +45,8 @@ internal static class MutatePatch {
         }
     }
 
-    private static void Postfix(DreamslashMutator __instance, GameObject abilityObject, UseType useType, GameObject __result, CastState __state) {
+    private static void Postfix(DreamslashMutator __instance, GameObject abilityObject, Vector3 location, Vector3 targetLocation, UseType useType, GameObject __result,
+        CastState __state) {
         if (__state.Active) {
             __instance.refractionChance = __state.RefractionChance;
         }
@@ -67,7 +68,7 @@ internal static class MutatePatch {
 
             string log = useType == UseType.Special ? Waves.Shape(__instance, slash) : Strike(__instance, slash, useType, __state);
             if (Settings.LogCasts) {
-                MelonLogger.Msg($"Dreamslash {useType}: {__instance.currentDreamStacks} Dream stack(s){log}");
+                MelonLogger.Msg($"Dreamslash {useType}: {__instance.currentDreamStacks} Dream stack(s); target {Vector3.Distance(location, targetLocation):0.#} away{log}");
             }
         } catch (Exception exception) {
             _fault.Report(exception);

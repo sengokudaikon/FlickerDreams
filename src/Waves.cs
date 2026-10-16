@@ -8,28 +8,26 @@ namespace FlickerDreams;
 
 // Sword waves are the game's refraction: a Special cast of Dreamslash, which slashes in place and sends a wave (Mutate turns
 // the dash off for it). A strike that spent a Dream stack carries one wave caster; when the slash ends, WaveCasterPatch
-// decides how many waves it sends, each at a different enemy. On the way to Mutate, mutateTargetLocation turns a Special
-// cast's target into the point Dreamslash's reach away in that enemy's direction, so the enemy is noted before that
-// (WaveAimPatch). Mutate then locks the wave onto it, so it hits only that enemy (WaveHitPatch), and lets it fly the whole
-// way (WaveFlightPatch).
+// decides how many waves it sends and sends them itself, one per enemy, through the player's AbilityObjectConstructor (as
+// CreateAbilityObjectOnDeath would). On the way to Mutate, mutateTargetLocation turns a Special cast's target into the point
+// Dreamslash's reach away in that enemy's direction, so the enemy is known only from the send. Mutate then locks the wave
+// onto it, so it hits only that enemy (WaveHitPatch), and lets it fly the whole way (WaveFlightPatch).
 internal static class Waves {
-    private const float _targetSnap = 2f;
+    private static IntPtr _sendingAt;
 
-    private static IntPtr _aimedAt;
-
-    // Before mutateTargetLocation of a wave: its target is the enemy's position.
-    public static void Aim(DreamslashMutator mutator, Vector3 targetLocation) {
-        _aimedAt = IntPtr.Zero;
-        Actor player = mutator.actor;
-        if (player != null && CharacterMutator.TryGetNearestEnemy(targetLocation, player.GetAlignment(), _targetSnap, 0f, out Actor enemy) && enemy != null) {
-            _aimedAt = enemy.Pointer;
+    public static void Send(DreamslashMutator mutator, Actor player, Vector3 location, Actor target) {
+        _sendingAt = target.Pointer;
+        try {
+            player.abilityObjectConstructor.constructAbilityObject(mutator.ability, location, target.position(), UseType.Special, null, true, false, mutator, false, null, 0f,
+                AbilityID.none, false, Vector3.zero);
+        } finally {
+            _sendingAt = IntPtr.Zero;
         }
     }
 
-    // Mutate of a wave, right after its mutateTargetLocation.
+    // Mutate of a wave, inside its Send.
     public static string Shape(DreamslashMutator mutator, GameObject wave) {
-        IntPtr target = _aimedAt;
-        _aimedAt = IntPtr.Zero;
+        IntPtr target = _sendingAt;
         string flight = WaveFlightPatch.Extend(wave);
         if (target == IntPtr.Zero) {
             return "; wave found no enemy at its target, so it hits everything" + flight;
@@ -39,28 +37,10 @@ internal static class Waves {
     }
 }
 
-[HarmonyPatch(typeof(DreamslashMutator), nameof(DreamslashMutator.mutateTargetLocation))]
-internal static class WaveAimPatch {
-    private static readonly Fault _fault = new("aiming sword waves");
-
-    private static void Prefix(DreamslashMutator __instance, ref Vector3 targetLocation, UseType useType) {
-        if (_fault.Stopped || useType != UseType.Special || !Dreamslash.Flickering(__instance)) {
-            return;
-        }
-
-        try {
-            Waves.Aim(__instance, targetLocation);
-        } catch (Exception exception) {
-            _fault.Report(exception);
-        }
-    }
-}
-
-// A wave caster fires when its slash ends: CreateAbilityObjectOnDeath.createAbilityObject casts 1 + additionalCasts times,
-// each at a random enemy within aimingDistance of the slash (mustTargetDifferentEnemies keeps them apart). The prefix
-// settles the count there, where the landing point, the enemies and the mana are known: Shared Memories' refraction chance
-// rolls the first wave (Inception chains more at half the chance each), capped by MostWaves, by the mana and by the enemies
-// in reach. It pays for those waves only, and skips the cast when there are none.
+// A wave caster fires when its slash ends (CreateAbilityObjectOnDeath.createAbilityObject). The prefix settles the count
+// there, where the landing point, the enemies and the mana are known: Shared Memories' refraction chance rolls the first
+// wave (Inception chains more at half the chance each), capped by MostWaves, by the mana and by the different enemies in
+// reach. It pays for those waves only, sends one at each of those enemies, and skips the caster's own cast.
 [HarmonyPatch(typeof(CreateAbilityObjectOnDeath), nameof(CreateAbilityObjectOnDeath.createAbilityObject))]
 internal static class WaveCasterPatch {
     private static readonly Fault _fault = new("sending sword waves");
@@ -89,7 +69,9 @@ internal static class WaveCasterPatch {
 
             float step = Settings.WaveManaCost * mana.maxMana + Settings.WaveManaFlat;
             int affordable = step > 0f ? Math.Min(rolled, (int)(mana.currentMana / step)) : rolled;
-            int waves = EnemiesNear(player, __instance.transform.position, affordable);
+            Vector3 location = __instance.transform.position;
+            Il2CppSystem.Collections.Generic.List<Actor> targets = EnemiesNear(player, location, affordable);
+            int waves = targets.Count;
             float cost = step * waves;
             if (Settings.LogCasts) {
                 MelonLogger.Msg($"Dreamslash waves: rolled {rolled}, mana for {affordable} -> {waves} (enemies in {Dreamslash.SearchRange:0.#}), cost {cost:0.#} of {mana.currentMana:0} mana");
@@ -103,9 +85,11 @@ internal static class WaveCasterPatch {
                 mana.reduceMana(cost);
             }
 
-            __instance.additionalCasts = waves - 1;
-            __instance.randomExtraCasts = 0;
-            return true;
+            for (int i = 0; i < targets.Count; i++) {
+                Waves.Send(mutator, player, location, targets[i]);
+            }
+
+            return false;
         } catch (Exception exception) {
             _fault.Report(exception);
             return false;
@@ -134,8 +118,8 @@ internal static class WaveCasterPatch {
         return Math.Min(waves, Dreamslash.MostWaves);
     }
 
-    // How many different enemies, up to limit, are within SearchRange of the landing point.
-    private static int EnemiesNear(Actor player, Vector3 location, int limit) {
+    // Different enemies, up to limit, within SearchRange of the landing point.
+    private static Il2CppSystem.Collections.Generic.List<Actor> EnemiesNear(Actor player, Vector3 location, int limit) {
         Alignment alignment = player.GetAlignment();
         var found = new Il2CppSystem.Collections.Generic.List<Actor>();
         Il2CppSystem.Collections.Generic.IEnumerable<Actor> exclude = found.Cast<Il2CppSystem.Collections.Generic.IEnumerable<Actor>>();
@@ -144,7 +128,7 @@ internal static class WaveCasterPatch {
             found.Add(enemy);
         }
 
-        return found.Count;
+        return found;
     }
 }
 
