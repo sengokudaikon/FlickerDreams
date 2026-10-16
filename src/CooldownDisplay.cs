@@ -6,15 +6,17 @@ using UnityEngine;
 namespace FlickerDreams;
 
 // The skill bar shows the mod's cooldown like a game cooldown. The game fills AbilityBarIcon.cooldownBar only from the
-// charge manager, for abilities with charges, and keeps the bar's object inactive for the rest (activateCooldownBarIfNecessary),
-// so nothing else writes Dreamslash's bar. Each frame (OnUpdateTick) the postfix shows the time left with the game's own
-// SetFillAmount0to1: with a Dream stack to spend the bar is dimmed, as for a skill with a charge left. When the cooldown
-// ends, ResetFillAmount empties it and plays the game's off-cooldown shine, and the bar's object goes back to how it was.
+// charge manager, for abilities with charges, so nothing else writes Dreamslash's bar. Each frame OnUpdateTick sets the
+// bar's object active exactly while the icon's cooldownBarActive flag is on, which the charge manager turns on
+// (activateCooldownBar) for abilities with charges. While the mod's cooldown runs the postfix turns the flag on the same way
+// and shows the time left with the game's SetFillAmount0to1: with a Dream stack to spend the bar is dimmed, as for a skill
+// with a charge left. When the cooldown ends, ResetFillAmount empties it and plays the game's off-cooldown shine, and the
+// flag goes back to how it was.
 [HarmonyPatch(typeof(AbilityBarIcon), nameof(AbilityBarIcon.OnUpdateTick))]
 internal static class SkillBarCooldownPatch {
     private static readonly Fault _fault = new("showing the Dreamslash cooldown");
     private static IntPtr _shownOn;
-    private static bool _activated;
+    private static bool _wasActive;
 
     private static void Postfix(AbilityBarIcon __instance) {
         float left = DreamslashCooldown.Remaining;
@@ -42,15 +44,19 @@ internal static class SkillBarCooldownPatch {
             if (left > 0f && Dreamslash.Flickering(mutator)) {
                 if (_shownOn != __instance.Pointer) {
                     _shownOn = __instance.Pointer;
-                    _activated = !bar.activeSelf;
+                    _wasActive = __instance.cooldownBarActive;
+                }
+
+                __instance.activateCooldownBar();
+                if (!bar.activeSelf) {
                     bar.SetActive(true);
                 }
 
                 __instance.SetFillAmount0to1(left / Settings.Cooldown, mutator.currentDreamStacks > 0);
             } else if (_shownOn == __instance.Pointer) {
                 __instance.ResetFillAmount();
-                if (_activated) {
-                    bar.SetActive(false);
+                if (!_wasActive) {
+                    __instance.deactivateCooldownBar();
                 }
 
                 _shownOn = IntPtr.Zero;

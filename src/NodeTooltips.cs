@@ -12,8 +12,8 @@ namespace FlickerDreams;
 
 // Dreamslash tree (dr4sl) tooltips for the nodes the mod changes: Dreamshift (24) unlocks it, Shared Memories (19) and
 // Inception (28) work differently with it. All node text goes through LocalizationSkills (both tooltip versions, every
-// language, the tree search); in English it returns originalValue. The postfixes append the mod's text, built from the
-// current settings. The decorated boxes are the node's stat lines (SkillTreeNode.stats), which NodeStatLines adds.
+// language, the tree search); in English it returns originalValue. The postfixes rewrite or extend it with the mod's text,
+// built from the current settings. The decorated boxes are the node's stat lines (SkillTreeNode.stats), which NodeStatLines adds.
 internal static class NodeTooltips {
     public const string TreeId = "dr4sl";
     public const byte SharedMemories = 19;
@@ -24,19 +24,35 @@ internal static class NodeTooltips {
 
     public static bool Applies(string treeID, byte nodeID) => treeID == TreeId && Changed(nodeID) && !GameplayEnvironment.IsOnlinePlay;
 
-    public static string Description(byte nodeID) => nodeID switch {
-        Dreamshift => $"Dreamslash also becomes a flicker: it can only be used with an enemy within {Meters(Dreamslash.BaseReach * Settings.ReachMultiplier)}, and a strike that consumes a {{Dream}} stack instantly strikes again at another enemy within {Meters(Dreamslash.SearchRange)}, consuming another stack, until your stacks run out."
-            + (Settings.Cooldown > 0f ? $" Each use starts a {Seconds(Settings.Cooldown)} cooldown; while it runs, using Dreamslash consumes a {{Dream}} stack, and without one you cannot use it." : ""),
-        SharedMemories => $"With Dreamshift, Dreamslash no longer refracts. Instead, a strike that consumes a {{Dream}} stack has this chance to send a sword wave at another enemy within {Meters(Dreamslash.SearchRange)}, for {WaveCost()}. It hits only that enemy.",
-        Inception => $"With Dreamshift, a strike can send up to {Dreamslash.MostWaves} sword waves, each at a different enemy. Each one after the first rolls at half the previous chance.",
-        _ => "",
+    // Dreamshift's own text says a use that consumes a shadow starts from the shadow's location, which the blink makes untrue,
+    // so the mod replaces it; the other two keep the game's text and gain a "With Dreamshift" paragraph.
+    public static string Description(byte nodeID, string original) => nodeID switch {
+        Dreamshift => string.Join("\n\n", DreamshiftDescription()),
+        SharedMemories => Append(original,
+            $"With Dreamshift: instead of refracting, each strike that consumes a {{Dream}} stack has this chance to send a sword wave at another enemy within {Meters(Dreamslash.SearchRange)}. "
+            + $"The wave hits only that enemy and costs {WaveCost()}."),
+        Inception => Append(original,
+            $"With Dreamshift: a strike can send up to {Dreamslash.MostWaves} sword waves, each at a different enemy. Each wave after the first has half the chance of the one before."),
+        _ => original,
     };
 
-    public static string AltText(byte nodeID) => nodeID switch {
-        Dreamshift => $"With Dreamshift, you blink to {Meters(Dreamslash.PassThrough)} past each target instead of sliding to it. A use that consumes a shadow ignores the cooldown and needs no enemy near you.",
-        SharedMemories => $"With Dreamshift, a sword wave flies up to {Meters(Dreamslash.BaseReach * Settings.ReachMultiplier)}. Waves you cannot pay for are not sent, and a strike that did not consume a Dream stack sends none.",
-        _ => "",
+    public static string AltText(byte nodeID, string original) => nodeID switch {
+        Dreamshift => Append(original, "A use that consumes a shadow ignores the cooldown and needs no enemy near you."),
+        SharedMemories => Append(original,
+            $"With Dreamshift: sword waves fly up to {Meters(Dreamslash.BaseReach * Settings.ReachMultiplier)}. Waves you cannot pay for are not sent."),
+        _ => original,
     };
+
+    private static IEnumerable<string> DreamshiftDescription() {
+        yield return "Shadows no longer perform Dreamslash.";
+        yield return $"Dreamslash becomes a flicker: it needs an enemy within {Meters(Dreamslash.BaseReach * Settings.ReachMultiplier)}, and you blink to just past your target.";
+        yield return $"Each strike that consumes a {{Dream}} stack strikes again at another enemy within {Meters(Dreamslash.SearchRange)}, consuming another stack, until you run out.";
+        if (Settings.Cooldown > 0f) {
+            yield return $"Each use starts a {Seconds(Settings.Cooldown)} cooldown. While it runs, Dreamslash consumes a {{Dream}} stack, and you cannot use it without one.";
+        }
+
+        yield return "If you directly use Dreamslash while below your maximum {Dream} stacks, you consume a shadow near an enemy to gain a stack.";
+    }
 
     // The decorated boxes: text, and whether it is a drawback (shown red).
     public static List<(string Text, bool Downside)> Boxes(byte nodeID) => nodeID switch {
@@ -50,7 +66,7 @@ internal static class NodeTooltips {
         _ => [],
     };
 
-    public static string Append(string original, string added) =>
+    private static string Append(string original, string added) =>
         string.IsNullOrEmpty(added) ? original : string.IsNullOrWhiteSpace(original) ? added : $"{original}\n\n{added}";
 
     private static string WaveCost() {
@@ -71,7 +87,7 @@ internal static class NodeTooltips {
 internal static class NodeDescriptionPatch {
     private static void Postfix(string treeID, byte nodeID, ref string __result) {
         if (NodeTooltips.Applies(treeID, nodeID)) {
-            __result = NodeTooltips.Append(__result, NodeTooltips.Description(nodeID));
+            __result = NodeTooltips.Description(nodeID, __result);
         }
     }
 }
@@ -80,7 +96,7 @@ internal static class NodeDescriptionPatch {
 internal static class NodeAltTextPatch {
     private static void Postfix(string treeID, byte nodeID, ref string __result) {
         if (NodeTooltips.Applies(treeID, nodeID)) {
-            __result = NodeTooltips.Append(__result, NodeTooltips.AltText(nodeID));
+            __result = NodeTooltips.AltText(nodeID, __result);
         }
     }
 }
