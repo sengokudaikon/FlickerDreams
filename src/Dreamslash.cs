@@ -19,6 +19,9 @@ internal static class Dreamslash {
     // Most sword waves one strike sends (Inception's chain).
     public const int MostWaves = 4;
 
+    // Figments of Annihilation counts up to this many repeats, as many as the shadows the game allows at once.
+    public const int MostFigmentSteps = 3;
+
     // Dreamshift unlocks the mod: without it Dreamslash plays as the game ships it. The node's own effect,
     // consumeShadowsForDreamStacks, is set exactly while it is allocated.
     public static bool Flickering(DreamslashMutator mutator) => mutator != null && mutator.consumeShadowsForDreamStacks && !GameplayEnvironment.IsOnlinePlay;

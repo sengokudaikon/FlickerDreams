@@ -76,7 +76,7 @@ internal static class MutatePatch {
     }
 
     private static string Strike(DreamslashMutator mutator, GameObject slash, UseType useType, CastState state) {
-        string dash = ExtendDash(slash);
+        string dash = ExtendDash(slash) + Figments(mutator, useType);
         bool direct = useType is UseType.Direct or UseType.InstantDirect or UseType.SummonerCastDirect;
         if (!(direct && state.ConsumedStack) && useType != Recasts.RepeatUseType) {
             return dash;
@@ -90,6 +90,24 @@ internal static class MutatePatch {
 
         Recasts.Add(mutator, slash, UseType.Special);
         return $"{dash}{repeat}; waves armed";
+    }
+
+    // Figments of Annihilation (critMultiPerShadowUsingSlash, per point) gives the slash added critical multiplier per shadow
+    // performing Dreamslash: Mutate zeroes critMultiFromShadowCount, then sets it to shadows x bonus, and getTempStats, after
+    // Mutate, adds it to the slash. With Dreamshift no shadow performs Dreamslash, so it stays 0. Instead each repeat in a
+    // chain counts as one more shadow, up to MostFigmentSteps: a press starts the chain without the bonus, its third repeat
+    // and later ones have the game's most.
+    private static int _chainStep;
+
+    private static string Figments(DreamslashMutator mutator, UseType useType) {
+        _chainStep = useType == Recasts.RepeatUseType ? _chainStep + 1 : 0;
+        float bonus = mutator.critMultiPerShadowUsingSlash * Math.Min(_chainStep, Dreamslash.MostFigmentSteps);
+        if (bonus <= 0f) {
+            return "";
+        }
+
+        mutator.critMultiFromShadowCount = bonus;
+        return $"; +{bonus:P0} critical multiplier";
     }
 
     // MoveCreatorToPositionOnDeath moves you to the target shifted by offsetDistanceFromTarget: a positive offset stops that

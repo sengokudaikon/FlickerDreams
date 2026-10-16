@@ -10,17 +10,19 @@ using MelonLoader;
 
 namespace FlickerDreams;
 
-// Dreamslash tree (dr4sl) tooltips for the nodes the mod changes: Dreamshift (24) unlocks it, Shared Memories (19) and
-// Inception (28) work differently with it. All node text goes through LocalizationSkills (both tooltip versions, every
-// language, the tree search); in English it returns originalValue. The postfixes rewrite or extend it with the mod's text,
-// built from the current settings. The decorated boxes are the node's stat lines (SkillTreeNode.stats), which NodeStatLines adds.
+// Dreamslash tree (dr4sl) tooltips for the nodes the mod changes: Dreamshift (24) unlocks it, Shared Memories (19),
+// Inception (28) and Figments of Annihilation (8) work differently with it. All node text goes through LocalizationSkills
+// (both tooltip versions, every language, the tree search); in English it returns originalValue. The postfixes rewrite or
+// extend it with the mod's text, built from the current settings. The decorated boxes are the node's stat lines
+// (SkillTreeNode.stats), which NodeStatLines adds.
 internal static class NodeTooltips {
     public const string TreeId = "dr4sl";
+    public const byte FigmentsOfAnnihilation = 8;
     public const byte SharedMemories = 19;
     public const byte Dreamshift = 24;
     public const byte Inception = 28;
 
-    public static bool Changed(byte nodeID) => nodeID is SharedMemories or Dreamshift or Inception;
+    public static bool Changed(byte nodeID) => nodeID is SharedMemories or Dreamshift or Inception or FigmentsOfAnnihilation;
 
     public static bool Applies(string treeID, byte nodeID) => treeID == TreeId && Changed(nodeID) && !GameplayEnvironment.IsOnlinePlay;
 
@@ -33,6 +35,9 @@ internal static class NodeTooltips {
             + $"The wave hits only that enemy and costs {WaveCost()}."),
         Inception => Append(original,
             $"With Dreamshift: a strike can send up to {Dreamslash.MostWaves} sword waves, each at a different enemy. Each wave after the first has half the chance of the one before."),
+        FigmentsOfAnnihilation => Append(original,
+            $"With Dreamshift: shadows no longer perform Dreamslash, so each repeat in a chain counts as one instead, up to {Dreamslash.MostFigmentSteps}. "
+            + $"The first strike of a chain gets no bonus; the {Ordinal(Dreamslash.MostFigmentSteps + 1)} and later get the full bonus."),
         _ => original,
     };
 
@@ -63,6 +68,7 @@ internal static class NodeTooltips {
         Dreamshift => [("Strikes Again at another Enemy per Dream Stack", false)],
         SharedMemories => [("With Dreamshift: Sword Wave at another Enemy for Mana", false)],
         Inception => [($"With Dreamshift: up to {Dreamslash.MostWaves} Sword Waves per Strike", false)],
+        FigmentsOfAnnihilation => [($"With Dreamshift: Bonus per Repeat in a Chain, up to {Dreamslash.MostFigmentSteps}", false)],
         _ => [],
     };
 
@@ -77,6 +83,15 @@ internal static class NodeTooltips {
             : flat > 0f ? $"{flat:0.#} mana"
             : "no mana";
     }
+
+    private static string Ordinal(int n) => n switch {
+        1 => "first",
+        2 => "second",
+        3 => "third",
+        4 => "fourth",
+        5 => "fifth",
+        _ => $"{n}th",
+    };
 
     private static string Meters(float meters) => $"{meters:0.#} meters";
 
